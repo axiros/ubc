@@ -1,21 +1,23 @@
 export CFG_DIR="/tmp/test_b2p_compl"
+_mdvl="$CFG_DIR/modules/mdvl"
+test -e "$_mdvl/mdvl.py" || {
+    /bin/rm -rf "$_mdvl"
+    mkdir -p "$_mdvl"
+    echo 'fetching markdown renderer mdvl'
+    curl "https://raw.githubusercontent.com/axiros/mdvl/master/mdvl.py" 1>"$_mdvl/mdvl.py"
+}
+
 
 comp_func=
 comp_height=5
 rlt_compgen () {
-    #echo "$COMP_WORDBREAKS" >> /tmp/wb
-    #local cur=${COMP_WORDS[$COMP_CWORD]}
-    #local last="$3"
-    #echo "$last" > /tmp/last
-    #local pos="$COMP_POINT"
-    #export b2pt_cmd="${COMP_WORDS[0]}"
     export b2pt_line="$COMP_LINE"
     export b2pt_d_cfg="$CFG_DIR"
-    export b2pt_match_substr="y"
+    #export b2pt_match_substr="y"
     export b2pt_term_width="$COLUMNS"
-
+    # we get back function name and height
     res=( `python -Ss "../completer.py"` )
-    # python -Ss "../completer.py" # yes you can get a tracepoint in foreground
+    #python -Ss "../completer.py" # yes you can get a tracepoint in foreground
 
 
     echo -e "\n\n\n=====================" >> /tmp/reslog
@@ -29,9 +31,24 @@ rlt_compgen () {
     cols="$COLUMNS"
 
     read -ra COMPREPLY <<< ${res[@]:2}
+}
+
+# nosort is bash > 4.4 (not sorting complete options):
+complete -o nosort -F rlt_compgen mm
+
+
+
+
+archive() {
     return
 
 
+    #echo "$COMP_WORDBREAKS" >> /tmp/wb
+    #local cur=${COMP_WORDS[$COMP_CWORD]}
+    #local last="$3"
+    #echo "$last" > /tmp/last
+    #local pos="$COMP_POINT"
+    #export b2pt_cmd="${COMP_WORDS[0]}"
 
 
     echo "new:$_new_comp_height:$_new_comp_func-old:$comp_height:$comp_func" >> /tmp/foo1
@@ -47,5 +64,3 @@ rlt_compgen () {
     comp_height="$_new_comp_height"
 }
 
-# nosort is bash > 4.4 (not sorting complete options):
-complete -o nosort -F rlt_compgen mm

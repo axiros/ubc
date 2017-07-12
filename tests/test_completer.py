@@ -140,7 +140,14 @@ class FindFunc(Tab):
                 , exp_err=(Err.func_unknown, ('subs',)))
 
 
+class Misc(Tab):
+    def test_space_to_subs_match(s):
+        # space -> subs match
+        out = s.c(' indeed', exact='Foo.FooSub.a_very_long_function_indeed' )
 
+class HelpSys(Tab):
+    def test_modh(s):
+        out = s.c('mm ??')
 
 class HaveFunc(Tab):
 
@@ -168,10 +175,10 @@ class HaveFunc(Tab):
                 vmf(T.hilite_reqv) + 'boolsch', vert=True)
 
     def test_val_key_compl(s):
-        s.c('fun2 asdf 23', exact='23')
+        s.c('fun2 asdf 13', exact='13')
 
     def test_val_key_after_compl(s):
-        s.c('fun2 asdf 23 ', T.func_st_compl[0].strip())
+        s.c('fun2 asdf 13 ', T.func_st_compl[0].strip())
 
     def test_long(s):
         s.f.match_substr = True

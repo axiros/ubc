@@ -21,6 +21,8 @@ create_mod('mm', """
 '''
 import json
 
+
+
 def fun(foo):
     '''some doc string
     stuf

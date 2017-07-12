@@ -83,28 +83,30 @@ class ComplTestmodeExc(Exception): 'In testmode we raise instead of sys.exit'
 class T:
     'Tags Namespace'
     # \xc2\xa0 looks like a space. is no space (non breaking space)
-    spc               = '\xc2\xa0'
-    #spc              = '\xE2\x80\x94' # debugging one (visual)
-    doc_start         = ' '
-    doc_end           = ' '
-    warn_pre          = ''
-    warn_post         = ''
-    no_dflt           = 'n.d.' # set by the indexer !
-    hilite_req        = '△'
-    hilite_reqv       = '▷'
-    hilite_have_key   = '▲'
-    hilite_have_keyv  = '▶' # vertical sig version
-    hilite_norm       = '─'
-    hilite_norm_compl = '━'
-    hilite_normv      = '⎸'
-    hilite_have       = '═'
-    hilite_havev      = '▌'
-    hilite_err_key    = '!'
-    hilite_err_keyv   = '!'
-    func_st_norm_s    = ' »,« ' # left and right, split by , (to allow via env)
-    func_st_compl_s   = '√ , √'
-    func_st_err_s     = '! , !'
-    func_st_norm      = func_st_norm_s.split(',')
+    spc                = '\xc2\xa0'
+    #spc               = '\xE2\x80\x94' # debugging one (visual)
+    doc_start          = ' '
+    doc_end            = ' '
+    warn_pre           = ''
+    warn_post          = ''
+    no_dflt            = 'n.d.' # set by the indexer !
+    hilite_req         = '△'
+    hilite_reqv        = '▷'
+    hilite_have_key    = '▲'
+    hilite_have_keyv   = '▶' # vertical sig version
+    hilite_norm        = '─'
+    hilite_norm_compl  = '━'
+    hilite_normv       = '⎸'
+    hilite_have        = '═'
+    hilite_havev       = '▌'
+    hilite_err_key     = '!'
+    hilite_err_keyv    = '!'
+    func_st_norm_s     = ' »,« ' # left and right, split by , (to allow via env)
+    func_st_compl_s    = '√ , √'
+    func_st_err_s      = '! , !'
+    func_st_norm       = func_st_norm_s.split(',')
+    func_st_err        = func_st_err_s.split(',')
+    func_st_compl      = func_st_compl_s.split(',')
 
 
 env_prefix = 'b2pt_' # see __init__
@@ -115,20 +117,22 @@ class Facts(Repr):
     '''
     # We do instantiate, for later stateful mode but we never change attrs
     # after init.
-    last            = None
     line            = None # as currently on the screen. maybe with seps
     cmd             = None # the principal command. 'hg' in 'hg cl<tab>'
-    d_cfg           = None
-    testmode        = None
-    match_substr    = None # allow to enter func names not from start
+    last            = None # unused
+    d_cfg           = None # where to load the index
+    testmode        = None # no sys.exit but raise result
+    # you can switch= this on per command like 'cmd  subs<tab>' (add. space)
+    match_substr    = 'on_demand' # allow to enter func names not from start
     allow_ci_bool   = True # allow to enter bools case insensitive
-    doc_show        = True
-    doc_show_sig    = True
     dflt_compl      = True # complete started defaults
     dflt_compl_nrs  = True # so this also for numbers
-    have_no_sort    = True # switch this to false if can't do
-    term_width      = 80
+    have_no_sort    = True # switch false if can't do (bash set -o no_sort)
     force_vertical  = False
+    doc_show        = True
+    sig_show        = True
+    sig_rpl_dflts   = True # when we have values we put into sigline
+    term_width      = 80   # all will be goin south if we don't have this right
 
 
     def setup(f):
@@ -139,28 +143,25 @@ class Facts(Repr):
         [setattr((f if hasattr(f, k) else T), k, v) for k, v in ck]
 
         f.term_width = int(f.term_width)
-        for k in 'compl', 'err':
-            k = 'func_st_' + k
-            setattr(T, k, getattr(T, k + '_s').split(','))
-
         if not f.d_cfg:
             raise Exception('have no config dir, set $%sd_cfg' % env_prefix)
-        f.cmd = f.line.split(' ', 1)[0]
-
 
         # indexer infos are also from outside, came earlier but still belong
         # here:
-        m = {}
+        f.cmd = f.line.split(' ', 1)[0]
+
+        m = f.load_file('defs.py')
+        f.funcs, f.reg = m['funcs'], m['reg']
+
+
+    def load_file(f, fn):
+        m, fn = {}, f.d_cfg + '/var/funcs/%s/%s' % (f.cmd, fn)
         try:
-            execfile(f.d_cfg + '/var/funcs/%s/defs.py' % f.cmd, m)
-            # the module mutates those during completion!
-            # -> should you go to a permanent coprocess loading only once then
-            # copy those first
-            f.funcs, f.reg = m['funcs'], m['reg']
+            execfile(fn, m)
+            return m
         except Exception as ex:
-            raise Exception(
-              'Error loading the defs for %s - did you run the indexer? %s' % (
-              f.cmd, ex))
+            raise Exception('Error loading %s - did indexer run? %s'% (fn, ex))
+
 
 class State(Repr):
     'Namespace for internal parsing state. We keep our progress here'
@@ -175,31 +176,34 @@ class State(Repr):
     reg        = None # set as soon we have the function
     res        = None
     err        = ''
-    sh_compl   = False
-    sh_doc     = False
+    sh_compl   = False # the list of completion options we'll return
     func_st    = T.func_st_norm
     err_key    = None
     doc_built  = False
     hilite     = None # keys to hilite in status line
+    help_mode  = None # does the user want help ?
+    help_shown = False
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -Functions. Easy.
 
-def match_entered_func(s, f):
+def match_entered_func(f, s, all_=None):
     '''s.func as entered. We build s.func_matches and reduce s.func to matching
+    supplying all_ this is also used to match the mods / funcs in doc.py
     '''
+    all_ = f.funcs if all_ is None else all_
     def get_matches(func, s=s, f=f):
-        funcs = f.funcs
+        funcs = all_
         if not func:
-            return f.funcs
+            return all_
         matches = [fn for fn in funcs if fn.startswith(func)]
         if not matches:
             # func given but does not match. substring match enabled?
-            if f.match_substr:
+            if s.match_substr:
                 matches = [fn for fn in funcs if func in fn]
         return matches
 
-    matches = f.funcs
+    matches = all_ # when s.func is empty
     while s.func:
         matches = get_matches(s.func)
         if matches:
@@ -230,7 +234,7 @@ def scan_blocks(f, s):
 
     # now we validate and register all blocks. On errors we dispaly help
     # else we complete s.to_complete:
-    s.keys_seen = [] # found in blocks
+    s.kvs_seen = {} # found in blocks
     # first block is the function itself.
     s.blocks.pop(0)
 
@@ -267,7 +271,7 @@ class Err(Exception):
     'block scanning exceptions'
     expct_other  = '"%s": expected "%s"'
     req_prm_name = '"%s": requiring parameter name'
-    unknown      = '"$s": unknown'
+    unknown      = '"%s": unknown'
     type_err     = '"%s": expected %s type'
     func_unknown = '"%s" function unknown'
 
@@ -294,7 +298,7 @@ def validate_and_register_block(f, s):
     if not key in s.args_left:
         raise Err(Err.unknown % key)
     validate_type_of_val_vs_dflt(f, s, key, val)
-    s.keys_seen.append(key)
+    s.kvs_seen[key] = val # used to replace dflts in sigline later
     sal = s.args_left
     sal.pop(key)
     if len(sal) == 1:
@@ -462,9 +466,11 @@ def key_and_dflt(s, k):
     dfl = '=' if dfl == T.no_dflt else '[=%s]' % dfl
     return '%s%s' % (k, dfl)
 
+
 def longest_match(keys):
     if not keys: return 0
-    if len(keys) == 1: return keys[0]
+    if len(keys) == 1:
+        return keys[0]
     k, c = list(keys[0]), ''
     while k:
         c += k.pop(0)
@@ -475,6 +481,7 @@ def longest_match(keys):
 
 
 # --------------------------------------------------- Formatting of Doc and Sig
+
 # need a tiny bit of unicode api, for textlengths vs. terminal width:
 u8 = 'utf-8'
 from functools import partial
@@ -483,8 +490,10 @@ uni = partial(unicode, encoding=u8)
 ulen = lambda s: len(uni(s))
 
 def mod_doc(f, s):
-    s.res.append('Available Functions:')
-    s.res.append('--------------------')
+    m = 'Available Functions:'
+    s.res.append(len(m) * '-')
+    s.res.append(m + T.spc * (f.term_width - len(m)))
+    s.res.append(len(m) * '-')
     for f in f.funcs:
         s.res.append(f)
     s.res.append(T.spc)
@@ -515,7 +524,7 @@ def func_doc(f, s, prefix='', into=None):
     hsig, vsig = ([], []), ([], [])
     sigm = {'kvs': None, 'hsig': hsig, 'vsig': vsig, 'hilite': hilite}
 
-    def build_sig(s=s, sigm=sigm, w=w):
+    def build_sig(f=f, s=s, sigm=sigm, w=w):
         '''py2 just have getargspec. rebuild the signature from it'''
         lsi = sigm['hsig'][0] # the horizontal sig line
         lhi = sigm['hsig'][1] # our markup line below the sig
@@ -537,7 +546,7 @@ def func_doc(f, s, prefix='', into=None):
         ak, args = s.reg['arg_keys'], s.reg['args']
         hilite = sigm['hilite']
         for k in ak:
-            v = args.get(k)
+            v = (s.kvs_seen if f.sig_rpl_dflts else args).get(k, args.get(k))
             v = '' if v == T.no_dflt else '=%s' % v
             kv = '%s%s' % (k, v)
             pre = '' if k == ak[0] else ', '
@@ -561,7 +570,7 @@ def func_doc(f, s, prefix='', into=None):
             addv(kv, T.hilite_reqv)
         add(')' + s.func_st[1])
 
-    if f.doc_show_sig:
+    if f.sig_show:
         build_sig()
         sigline = ''.join(hsig[0])
         hi_line = ''.join(hsig[1])
@@ -631,8 +640,9 @@ def done(f, s):
 
     for line, i in zip(s.res, range(len(s.res))):
         l(i, line)
-
-    out = '\n'.join(s.res).replace(' ', T.spc)
+    out = '\n'.join(s.res)
+    if not s.help_shown:
+        out = out.replace(' ', T.spc)
     out += '\n'
     h = height(f.term_width, out) + 3
     l('height %s.' % h)
@@ -653,24 +663,134 @@ def height(w, out):
         r += ((ulen(line) - 1) / w ) + 1
     return r
 
+
+# ----------------------------------------------------- Help System (...?<TAB>)
+# we show the docu of functions, whatever the indexer gave us
+def show_help(f, s):
+    s.help_out = []  # storing result
+    # how many '?':
+    m = f.load_file('doc.py')
+    s.help_docu = d = m['docu']
+    s.func = s.line.split(' ', 1)[0]
+    match_entered_func(f, s, all_=d.keys())
+    match = sorted(s.func_matches)[0] if s.func_matches else ''
+    for i in range(1, 10):
+        if f.line[-(i+1)] != '?':
+            break
+    show_help_for(f, s, match, level=i)
+    h = s.help_out
+    if h:
+        h.append('***')
+        md = '\n'.join(h)
+        d_mdvl = f.d_cfg + '/modules/mdvl'
+        sys.path.insert(0, d_mdvl)
+        try:
+            import mdvl
+            md = mdvl.main(md, term_width=f.term_width, no_print=True)[0]
+        except:
+            sys.stderr.write('Have no mdvl hilite - plain output:\n')
+        sys.stderr.write('\n' + md + '\n')
+    return match
+
+def parse_func_code(lines):
+    sig, doc, body = _parse_func_code(lines)
+    try:
+        sig = '\n'.join(sig)
+        sig = sig.rsplit(':', 1)[0].split('def ', 1)[1]
+    except Exception as ex:
+        import pdb;pdb.set_trace()
+    body = body.strip()
+    i = len(sig) - len(sig.lstrip())
+    if i:
+        body = body.replace('\n' + ' ' * i, '\n')
+    return sig, doc, body
+
+def _parse_func_code(lines):
+    from inspect import cleandoc
+    if len(lines) == 1:
+        _ = lines[0].split(':', 1)
+        return [_[0] + ':'], '', _[1]
+
+    sig, doc = [], []
+    while lines:
+        l = lines.pop(0)
+        sig.append(l)
+        if l.rstrip().endswith(':'):
+            break
+
+    l = '\n'.join(lines).strip()
+    for apo in "'''", '"""', "'", '"', '':
+        if l.startswith(apo):
+            break
+    if not apo:
+        # no docstring
+        return sig, '', lines
+    l = l.split(apo, 2)
+    return sig, cleandoc(l[1]), l[2]
+
+
+
+
+def show_help_for(f, s, name, level):
+    '''print stuff (with ansi codes) to stderr'''
+    md = []
+    _ = s.help_docu.get(name)
+    docu, type = _['d'].strip(), _['t']
+    md.append('%s **%s**:' % (type.capitalize(), name or f.cmd))
+    if type == 'function':
+        sig, doc, body = parse_func_code(docu.splitlines())
+        md.append('> ' + sig)
+        md.append('\n' + doc)
+        if level > 1:
+            md.append('```\n%s\n```' % body)
+    else:
+        md.append('\n' + docu)
+    md.insert(0, '---\n')
+    s.help_out.extend(md)
+
+    if level > 1 and not type == 'function':
+        for k in sorted(s.help_docu.keys()):
+            ksub = k[len(name):]
+            if k != name and not '.' in k[1:]:
+                show_help_for(f, s, k, level-1)
+
+
+
+
 # -------------------------------------------------------------- Highlevel Flow
 def main(f):
+    '''
+    - find/complete the actual function
+    - go through complete key values
+    '''
     if 0: # testing replies in real life on the cli:
         print '\n abc\n abd\n'
         #print '\nfoo="» some doc string ⤿ stu\nfoo=\n'
         sys.exit(0)
-    #import time
-    #l('\n', time.ctime(), 'in|', (f.line,), '|')
-    f.setup()
+
+    f.setup() # read the module index file
     s = State()
     s.res = []
     s.sh_compl = []
+    f.line = f.line.replace(T.spc, ' ')
+
     # the principal cmd is not relevant for parsing
-    s.line = f.line[len(f.cmd) + 1:].strip()
+    s.line = f.line[len(f.cmd) + 1:]
+    s.match_substr = ( True if f.match_substr == True or
+                       ( s.line.startswith(' ') and f.match_substr=='on_demand')
+                       else False )
+
+    l('fline', f.line, 'sline', s.line, s.match_substr)
+    s.line = ln = s.line.strip()
+    if ln.endswith('?'):
+        match = show_help(f, s) # will print infos on stderr.
+        while s.line.endswith('?'):
+            s.line = s.line[:-1]
 
     # func until first space:
     s.func = s.line.split(' ', 1)[0].split(T.spc, 1)[0]
-    match_entered_func(s, f)
+    match_entered_func(f, s)
+    l('funcm', s.func_matches)
 
     if not s.func_matches:
         s.err = Err.func_unknown % f.line.strip()
@@ -700,5 +820,7 @@ def main(f):
 
 if __name__ == '__main__':
     main(Facts())
+
+
 
 

@@ -21,15 +21,15 @@ from fnmatch import fnmatch
 # Facts (from outside)
 class Facts:
     # defaults:
-    d_cfg     = None  # config dir, we write into this
-    modn      = None  # module to index (when called from command line)
-    fmatch    = '*'   # what functions to index
-    mmatch    = '*'   # what modules to index
-    cmatch    = '*'   # what classes to index
-    depth     = 1     # import follow depth
-    cdepth    = 2     # nested objects within a mod follow depth
-    py_path   = None  # add this to sys.path before importing
-    mod       = None  # inline callers could give a facts instance with a loaded
+    d_cfg    = None  # config dir, we write into this
+    modn     = None  # module to index (when called from command line)
+    fmatch   = '*'   # what functions to index
+    mmatch   = '*'   # what modules to index
+    cmatch   = '*'   # what classes to index
+    depth    = 1     # import follow depth
+    cdepth   = 2     # nested objects within a mod follow depth
+    py_path  = None  # add this to sys.path before importing
+    mod      = None  # inline callers could give a facts instance with a loaded
                       # mod. No import trying then.
     max_doc_lines = 5 # max lines to show on doc string while completing
 
@@ -158,7 +158,7 @@ def main(f):
         doc['.'.join(k[1:])] = doc.pop(k)
     from pprint import pformat
     with open(d_m + '/doc.py', 'w') as fd:
-        fd.write(pformat(doc))
+        fd.write('docu = ' + pformat(doc))
 
 
 
