@@ -27,7 +27,7 @@ No stdin though, set it to fd 0 if you can't type w/o seeing what you type.
 
 ## Proper Test Foreground Prints
 
-    export b2pt_term_width="$COLUMNS"
+    export ubc_term_width="$COLUMNS"
 
 in the terminal you run the tests. After resizing again, should be clear ;-)
 
@@ -38,7 +38,7 @@ in the terminal you run the tests. After resizing again, should be clear ;-)
 
 Do this:
 
-    export b2pt_spc=-
+    export ubc_spc=-
 
 Then run the tests again in foreground, you'll see the fake spaces then, e.g.:
 

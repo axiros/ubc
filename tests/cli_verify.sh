@@ -11,13 +11,13 @@ test -e "$_mdvl/mdvl.py" || {
 comp_func=
 comp_height=5
 rlt_compgen () {
-    export b2pt_line="$COMP_LINE"
-    export b2pt_d_cfg="$CFG_DIR"
-    #export b2pt_match_substr="y"
-    export b2pt_term_width="$COLUMNS"
+    export ubc_line="$COMP_LINE"
+    export ubc_d_cfg="$CFG_DIR"
+    #export ubc_match_substr="y"
+    export ubc_term_width="$COLUMNS"
     # we get back function name and height
-    res=( `python -Ss "../completer.py"` )
-    #python -Ss "../completer.py" # yes you can get a tracepoint in foreground
+    #res=( `python -Ss "../completer.py"` )
+    python -Ss "../completer.py" # yes you can get a tracepoint in foreground
 
 
     echo -e "\n\n\n=====================" >> /tmp/reslog
@@ -48,7 +48,7 @@ archive() {
     #local last="$3"
     #echo "$last" > /tmp/last
     #local pos="$COMP_POINT"
-    #export b2pt_cmd="${COMP_WORDS[0]}"
+    #export ubc_cmd="${COMP_WORDS[0]}"
 
 
     echo "new:$_new_comp_height:$_new_comp_func-old:$comp_height:$comp_func" >> /tmp/foo1

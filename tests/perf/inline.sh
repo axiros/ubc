@@ -1,4 +1,5 @@
-#!/usr/bin/env python -Ss
+#!/usr/bin/env bash
+read -d '' comp <<'EOF'
 # coding: utf-8
 '''
 # Tab Completer
@@ -156,7 +157,9 @@ class Facts(Repr):
 
     def load_file(f, fn):
         m, fn = {}, f.d_cfg + '/var/funcs/%s/%s' % (f.cmd, fn)
-        #if not os.path.exists(fn):
+        if not os.path.exists(fn):
+            import pdb; pdb.set_trace()
+
         try:
             execfile(fn, m)
             return m
@@ -249,7 +252,7 @@ def scan_blocks(f, s):
         # space, i.e. does not need to be completed anymore)
         # we also insert an empty last block:
         if not s.apo_miss:
-            if f.line[-1] in " '\"":
+            if f.line[-1] in " '\\"":
                 s.blocks.append('')
 
     s.last_block = s.blocks.pop()
@@ -823,5 +826,29 @@ if __name__ == '__main__':
     main(Facts())
 
 
+EOF
 
 
+export ubc_line='mm fun1'
+export ubc_d_cfg='/tmp/test_b2p_compl/'
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null
+python -Ssc  "$comp" >/dev/null

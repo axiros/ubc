@@ -156,7 +156,9 @@ class Facts(Repr):
 
     def load_file(f, fn):
         m, fn = {}, f.d_cfg + '/var/funcs/%s/%s' % (f.cmd, fn)
-        #if not os.path.exists(fn):
+        if not os.path.exists(fn):
+            import pdb; pdb.set_trace()
+
         try:
             execfile(fn, m)
             return m

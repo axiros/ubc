@@ -1,5 +1,4 @@
 '''
-Handling rt_loadmod
 Writes module completion information into a config directory.
 
 depth: module import depth
@@ -23,6 +22,7 @@ class Facts:
     # defaults:
     d_cfg    = None  # config dir, we write into this
     modn     = None  # module to index (when called from command line)
+    mod_alias= None  # store indexer results not as last part of modn but as this
     fmatch   = '*'   # what functions to index
     mmatch   = '*'   # what modules to index
     cmatch   = '*'   # what classes to index
@@ -129,11 +129,13 @@ def parse_cont(cont, prefix, f, s):
 def main(f):
     ''' entry point for inline calls. give it a facts instance'''
     s = State()
+    s.modn = f.modn.rsplit('.py', 1)[0]
     if f.mod:
         s.mod = f.mod
+        s.n = f.mod.__name__
     else:
         try:
-            s.mod, s.n = __import__(f.modn), f.modn.rsplit('.', 1)[-1]
+            s.mod, s.n = __import__(s.modn), s.modn.rsplit('.', 1)[-1]
         except Exception as ex:
             raise Exception('Could not import: %s.' % str(ex))
 
@@ -144,9 +146,9 @@ def main(f):
 
     parse_cont(s.mod, (), f, s)
 
-    d_m = "%s/var/funcs/%s" % (f.d_cfg, s.n)
+    d_m = "%s/var/funcs/%s" % (f.d_cfg, f.mod_alias or s.n)
     s.funcs = sorted(s.funcs)
-    l('writing', s.funcs)
+    l('writing', d_m)
     os.system('mkdir -p "%s"' % d_m)
     with open(d_m + '/defs.py', 'w') as fd:
         fd.write('funcs = %s' % str(s.funcs))
@@ -163,9 +165,12 @@ def main(f):
 
 
 if __name__ == '__main__':
+    # config through cli or inline only, no env
     f = Facts()
     args = list(sys.argv[1:])
     try:
+        if not args:
+            raise
         while args:
             a, v = args.pop(0).split('=')
             _ = getattr(f, a) # to crash on wrong arg
