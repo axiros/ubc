@@ -1,4 +1,4 @@
-#!/usr/bin/env python -tt
+#!/usr/bin/env python2
 from setup import d_test, fn_reg
 import unittest, sys, os
 from functools import partial
