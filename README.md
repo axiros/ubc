@@ -1,5 +1,6 @@
 # Universal Bash Completer
 
+[![Build Status](https://travis-ci.org/axiros/ubc.svg?branch=master)](https://travis-ci.org/axiros/ubc)
 
 This is a first shot of bash completer which does a little more than 'normal'
 completers.
