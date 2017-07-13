@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
 
-FASTPY='python -Ss'
+FASTPY='python -Ss' # py2 is faster.
 
 read -d '' docu<<'EOF'
 # Universal Bash Completer
 
 ## Usage
 
-    source ./ubc [-d] [-f] [-u <mod_url>] <cmd_name> <target_module>
+    source ./ubc [SWITCHES] <cmd_name> <target_module>
 
 Will start completing any input on the command line starting with
 `cmd_name`, looking into `target_module` (given with our without '.py' ending).
 
 ## Switches
 
-*-d*:  We'll use `completer.py` and `indexer.py` next to the `ubc` script and NOT try download.
+*-r*:  re-index target_module
 
+*-l*:  "live" mode, re-index on any change of target_module.
+
+*-d*:  We'll use `completer.py` and `indexer.py` next to the `ubc` script and NOT try download.
 
 *-f*: foreground mode (debug). set_trace possible then but no completion. Implies `-d`.
 
-*-u*: set download url. Default is "https://raw.githubusercontent.com/axiros"
+*-u=<url>*: set download url. Default is "https://raw.githubusercontent.com/axiros"
+
+*-h*: help
 
 
 ## Mode of Operation
@@ -39,13 +44,18 @@ unset FG # foreground mode (set_trace then possible)
 MOD_URL="https://raw.githubusercontent.com/axiros"
 FG=false
 D=false
-while getopts "u:fd" opt; do
+H=false
+REINDEX=false
+while getopts "u:fdhr" opt; do
     case "$opt" in
-        u) MOD_URL="$OPTARG"; shift; shift;;
-        f) FG=true; shift;;
-        d) D=true; shift;;
+        u) MOD_URL="$OPTARG";;
+        f) FG=true;;
+        d) D=true;;
+        h) H=true;;
+        r) REINDEX=true;;
     esac
 done
+shift "$((OPTIND-1))"
 export ubc_cmd="$1"; shift
 export ubc_mod="$1"; shift
 export ubc_dir=$(unset CDPATH && cd "$(dirname "$BASH_SOURCE")" && echo $PWD)
@@ -56,6 +66,7 @@ export CFG_DIR MOD_URL
 export MDOUT="$FASTPY "$CFG_DIR/modules/mdvl/mdvl.py""
 
 fetch () {
+    # fetches necessary modules from $MOD_URL
     local pkg="$1"; shift
     local fn="$1"; shift
     local d_mod="$CFG_DIR/modules/$pkg"
@@ -71,12 +82,14 @@ fetch () {
 }
 
 # get to the libraries - pull or next to this script:
+fetch "mdvl" "mdvl.py"
+$H && { $MDOUT "$docu"; return; }
 err=
 ! $D && {
     fetch "ubc" "completer.py"
     fetch "ubc" "indexer.py"
 }
-fetch "mdvl" "mdvl.py"
+
 test -z "$err" || { echo "$err"; return; }
 
 test -z $ubc_mod && { $MDOUT "$docu"; return; }
@@ -85,7 +98,9 @@ $D && d_compl="$ubc_dir" || \
       d_compl="$CFG_DIR/modules/ubc"
 
 
-rlt_compgen () {
+ubc_compgen () {
+    # this is what bash calls and expects $COMPREPLY to be set from, with the
+    # completion options (which it shows all on double <tab>)
     export ubc_line="$COMP_LINE"
     export ubc_d_cfg="$CFG_DIR"
     export ubc_term_width="$COLUMNS"
@@ -96,22 +111,11 @@ rlt_compgen () {
     # we get back function name and height
     res=( `$FASTPY "$d_compl/completer.py"` )
     read -ra COMPREPLY <<< ${res[@]:2}
-    return
-
-    # debugging
-    echo -e "\n\n\n=====================" >> /tmp/reslog
-    for line in ${res[@]}; do echo $line>>/tmp/reslog; done
-
-    echo -e "=====================" >> /tmp/reslog
-    _new_comp_func="${res[0]}"
-    _new_comp_height="${res[1]}"
-    _new_cols="$COLUMNS"
-    if [ "x$_new_cols" != "x$cols" ]; then comp_func=; fi
-    cols="$COLUMNS"
-
 }
 
-test -e "$CFG_DIR/var/funcs/$ubc_cmd/defs.py" || {
+d_cmd="$CFG_DIR/var/funcs/$ubc_cmd"
+$REINDEX && /bin/rm -rf "$d_cmd"
+test -e "$d_cmd/defs.py" || {
     $MDOUT "> primary indexing of $ubc_mod"
     $FASTPY "$d_compl/indexer.py" \
         modn="$ubc_mod" d_cfg="$CFG_DIR" mod_alias="$ubc_cmd" || {
@@ -119,39 +123,64 @@ test -e "$CFG_DIR/var/funcs/$ubc_cmd/defs.py" || {
     }
 }
 # nosort is bash > 4.4 (not sorting complete options):
-complete -o nosort -F rlt_compgen "$ubc_cmd"
+complete -o nosort -F ubc_compgen "$ubc_cmd"
 $MDOUT "> have activated completion of $ubc_cmd, using $ubc_mod"
 
 
 
 
-___ubc_fix_height() {
-    # a try to move the cursor up $height lines so that it does not spam
-    # the console on repeated double tabs.
-    # conclusion: Possible (it returns its height) but not worth the effort.
-    # safe only if it manages to output always the same amount of lines only.
-    # we drop the feature for now.
-    return
 
 
-    #echo "$COMP_WORDBREAKS" >> /tmp/wb
-    #local cur=${COMP_WORDS[$COMP_CWORD]}
-    #local last="$3"
-    #echo "$last" > /tmp/last
-    #local pos="$COMP_POINT"
-    #export ubc_cmd="${COMP_WORDS[0]}"
 
 
-    echo "new:$_new_comp_height:$_new_comp_func-old:$comp_height:$comp_func" >> /tmp/foo1
 
-    #if [ "$_new_comp_height" -lt "$comp_height" ]; then { comp_func=; comp_height=5; return; }; fi
 
-    if [[ "x$_new_comp_func" == "x$comp_func" ]]; then
-        echo -e "\033[${comp_height}A"
-        for ((i=1;i<=$comp_height;i++)); do echo -e "\033[K"; done
-        echo -e "\033[${comp_height}A"
-    fi
-    comp_func="$_new_comp_func"
-    comp_height="$_new_comp_height"
-}
 
+
+
+
+
+
+
+
+#___ubc_fix_height() {
+#    echo -e "\n\n\n=====================" >> /tmp/reslog
+#    for line in ${res[@]}; do echo $line>>/tmp/reslog; done
+#
+#    echo -e "=====================" >> /tmp/reslog
+#    _new_comp_func="${res[0]}"
+#    _new_comp_height="${res[1]}"
+#    _new_cols="$COLUMNS"
+#    if [ "x$_new_cols" != "x$cols" ]; then comp_func=; fi
+#    cols="$COLUMNS"
+#
+#
+#    # a try to move the cursor up $height lines so that it does not spam
+#    # the console on repeated double tabs.
+#    # conclusion: Possible (it returns its height) but not worth the effort.
+#    # safe only if it manages to output always the same amount of lines only.
+#    # we drop the feature for now.
+#    return
+#
+#
+#    #echo "$COMP_WORDBREAKS" >> /tmp/wb
+#    #local cur=${COMP_WORDS[$COMP_CWORD]}
+#    #local last="$3"
+#    #echo "$last" > /tmp/last
+#    #local pos="$COMP_POINT"
+#    #export ubc_cmd="${COMP_WORDS[0]}"
+#
+#
+#    echo "new:$_new_comp_height:$_new_comp_func-old:$comp_height:$comp_func" >> /tmp/foo1
+#
+#    #if [ "$_new_comp_height" -lt "$comp_height" ]; then { comp_func=; comp_height=5; return; }; fi
+#
+#    if [[ "x$_new_comp_func" == "x$comp_func" ]]; then
+#        echo -e "\033[${comp_height}A"
+#        for ((i=1;i<=$comp_height;i++)); do echo -e "\033[K"; done
+#        echo -e "\033[${comp_height}A"
+#    fi
+#    comp_func="$_new_comp_func"
+#    comp_height="$_new_comp_height"
+#}
+#

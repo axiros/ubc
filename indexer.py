@@ -129,8 +129,21 @@ def parse_cont(cont, prefix, f, s):
 def main(f):
     ''' entry point for inline calls. give it a facts instance'''
     s = State()
-    s.modn = f.modn.rsplit('.py', 1)[0]
-    if f.mod:
+    try:
+        _main(f, s)
+    finally:
+        os.chdir(s.d_cur)
+
+
+def _main(f, s):
+    n = f.modn
+    s.modn = f.modn
+    s.d_cur = os.getcwd()
+    if n.endswith('.py'): # full path, make importable:
+        d_mod = os.path.abspath(n.rsplit('/', 1)[0])
+        s.modn = n.rsplit('/', 1)[1].split('.py',1 )[0]
+        os.chdir(d_mod)
+    if f.mod: # inline call, with module as object
         s.mod = f.mod
         s.n = f.mod.__name__
     else:
