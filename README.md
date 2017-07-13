@@ -3,9 +3,10 @@
 [![Build Status](https://travis-ci.org/axiros/ubc.svg?branch=master)](https://travis-ci.org/axiros/ubc)
 [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
+![](./img/catt.png)
 
 This is a first shot of bash completer which does a little more than 'normal'
-completers.
+completers - and is pretty extensible.
 
 Currently you can point it to arbitray python modules and it will introspect
 and complete the names and arguments of classes and functions therein.
