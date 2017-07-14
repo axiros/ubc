@@ -6,7 +6,7 @@
 
 &nbsp; 
 
-<img src="./img/catt.png" width=400px>
+<img src="./img/catt.png" width=400px style="border: 0 !important"></img>
 
 This is a first shot of bash completer which does a little more than 'normal'
 completers - and is pretty extensible.
