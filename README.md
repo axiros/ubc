@@ -13,7 +13,7 @@ and complete the names and arguments of classes and functions therein.
 
 Here a demo:
 
-[![asciicast](https://asciinema.org/a/g3lg9CKBNtx72Vn3LYMw8e50I.png)](https://asciinema.org/a/g3lg9CKBNtx72Vn3LYMw8e50I)
+[![asciicast](https://asciinema.org/a/g3lg9CKBNtx72Vn3LYMw8e50I.png)](https://asciinema.org/a/g3lg9CKBNtx72Vn3LYMw8e50I?autoplay=1&theme=solarized-dark)
 
 The indexing can be parametrized, to match only substrings or go into the
 structure only up to certain levels.
