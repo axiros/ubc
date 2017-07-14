@@ -4,9 +4,9 @@
 [![Build Status](https://travis-ci.org/axiros/ubc.svg?branch=master)](https://travis-ci.org/axiros/ubc)
 [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
+&nbsp; 
 
 <img src="./img/catt.png" width=400px>
-</p>
 
 This is a first shot of bash completer which does a little more than 'normal'
 completers - and is pretty extensible.
