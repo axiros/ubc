@@ -1,15 +1,15 @@
 # Universal Bash Completer
 
-[![Build Status](https://travis-ci.org/axiros/ubc.svg?branch=master)](https://travis-ci.org/axiros/ubc)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[![Build Status](https://travis-ci.org/axiros/ubc.svg?branch=master)](https://travis-ci.org/axiros/ubc)
 [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-![](./img/catt.png)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="./img/catt.png" width=200px style="left: 50%;">
+</p>
 
 This is a first shot of bash completer which does a little more than 'normal'
 completers - and is pretty extensible.
-
-Currently you can point it to arbitray python modules and it will introspect
-and complete the names and arguments of classes and functions therein.
 
 Here a demo:
 
@@ -17,6 +17,16 @@ Here a demo:
 
 The indexing can be parametrized, to match only substrings or go into the
 structure only up to certain levels.
+
+## Universal? This is Python!?
+
+Yes, currently you can point it to arbitray python modules and it will introspect and complete the names and arguments of classes and functions therein.  
+What you might not realize yet is the fact that completion and execution are two very distinct processes. Introspecting a Python module was just one example of getting to a hirarchical tree of information as completion basis - and that tree's format is json.
+
+----
+
+
+# Tech
 
 ## Bash Completion
 
