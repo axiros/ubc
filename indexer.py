@@ -136,17 +136,18 @@ def main(f):
 
 
 def _main(f, s):
-    n = f.modn
+    f.modn = n =os.path.abspath(f.modn)
     s.modn = f.modn
     s.d_cur = os.getcwd()
     if n.endswith('.py'): # full path, make importable:
         d_mod = os.path.abspath(n.rsplit('/', 1)[0])
-        s.modn = n.rsplit('/', 1)[1].split('.py',1 )[0]
+        s.modn = n.rsplit('/', 1)[-1].split('.py',1 )[0]
         os.chdir(d_mod)
     if f.mod: # inline call, with module as object
         s.mod = f.mod
         s.n = f.mod.__name__
     else:
+        sys.path.insert(0, d_mod) if not d_mod in sys.path else None
         try:
             s.mod, s.n = __import__(s.modn), s.modn.rsplit('.', 1)[-1]
         except Exception as ex:
