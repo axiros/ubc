@@ -137,10 +137,10 @@ def main(f):
 
 def _main(f, s):
     f.modn = n =os.path.abspath(f.modn)
+    d_mod = n.rsplit('/', 1)[0]
     s.modn = f.modn
     s.d_cur = os.getcwd()
     if n.endswith('.py'): # full path, make importable:
-        d_mod = os.path.abspath(n.rsplit('/', 1)[0])
         s.modn = n.rsplit('/', 1)[-1].split('.py',1 )[0]
         os.chdir(d_mod)
     if f.mod: # inline call, with module as object
