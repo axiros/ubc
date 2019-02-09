@@ -1,8 +1,7 @@
 #!/bin/bash
 
-echo "getting"
+echo "getting $foo1 $foo2 :-)"
 
-wget --no-check-certificate "https://axc2.axiros.com/travis/`git rev-parse HEAD`"
 
 set -e
 ./tests/test_indexer.py
